@@ -132,7 +132,7 @@ class MessageRepository {
 
   Future<void> saveItinerary(int chatId, Itinerary itinerary) async {
     await _isar.writeTxn(() async {
-      await _isar.itineraries.put(itinerary);
+      await _isar.collection<Itinerary>().put(itinerary);
       
       final session = await _isar.chatSessions
           .filter()
@@ -160,6 +160,6 @@ class MessageRepository {
   }
 
   Future<List<Itinerary>> getAllItineraries() async {
-    return await _isar.itineraries.where().sortByCreatedAtDesc().findAll();
+    return await _isar.collection<Itinerary>().where().sortByCreatedAtDesc().findAll();
   }
 }
