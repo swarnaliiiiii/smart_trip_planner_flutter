@@ -17,34 +17,57 @@ class ChatSendSuccess extends ChatState {}
 class ChatReciveSuccess extends ChatState {
   final String response;
 
-  ChatReciveSuccess(this.response);
+  const ChatReciveSuccess(this.response);
+
+  @override
+  List<Object> get props => [response];
 }
 
 class ChatStreaming extends ChatState {
   final String streamedText;
 
-  ChatStreaming(this.streamedText);
+  const ChatStreaming(this.streamedText);
+
+  @override
+  List<Object> get props => [streamedText];
 }
 
 class ChatFailure extends ChatState {
   final String error;
 
-  ChatFailure(this.error);
+  const ChatFailure(this.error);
+
+  @override
+  List<Object> get props => [error];
 }
 
 class NewChatSessionCreated extends ChatState {
   final int newChatId;
 
-  NewChatSessionCreated(this.newChatId);
+  const NewChatSessionCreated(this.newChatId);
+
+  @override
+  List<Object> get props => [newChatId];
 }
 
 class ChatSessionDeleted extends ChatState {
   final int chatId;
 
-  ChatSessionDeleted(this.chatId);
+  const ChatSessionDeleted(this.chatId);
+
+  @override
+  List<Object> get props => [chatId];
 }
 
-class ChatListUpdated extends ChatState {}
+class ChatSessionLoaded extends ChatState {
+  final int chatId;
+  final List<Message> messages;
+
+  const ChatSessionLoaded(this.chatId, this.messages);
+
+  @override
+  List<Object> get props => [chatId, messages];
+}
 
 class ItineraryReceivedSuccess extends ChatState {
   final Itinerary itinerary;
@@ -54,4 +77,3 @@ class ItineraryReceivedSuccess extends ChatState {
   @override
   List<Object> get props => [itinerary];
 }
-

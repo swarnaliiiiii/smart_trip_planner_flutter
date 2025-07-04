@@ -18,7 +18,6 @@ class PostDataEvent extends ChatEvent {
     required this.prompt,
     required this.chatId,
     required this.isUser,
-
     this.recognizedText,
   });
 
@@ -45,6 +44,19 @@ class StreamDataEvent extends ChatEvent {
   List<Object> get props => [prompt, chatId, isUser, recognizedText ?? ''];
 }
 
+class GenerateItineraryEvent extends ChatEvent {
+  final String prompt;
+  final int chatId;
+
+  const GenerateItineraryEvent({
+    required this.prompt,
+    required this.chatId,
+  });
+
+  @override
+  List<Object> get props => [prompt, chatId];
+}
+
 class CreateNewChatSessionEvent extends ChatEvent {
   const CreateNewChatSessionEvent();
 
@@ -56,6 +68,15 @@ class DeleteChatSessionEvent extends ChatEvent {
   final int chatId;
 
   const DeleteChatSessionEvent(this.chatId);
+
+  @override
+  List<Object> get props => [chatId];
+}
+
+class LoadChatSessionEvent extends ChatEvent {
+  final int chatId;
+
+  const LoadChatSessionEvent(this.chatId);
 
   @override
   List<Object> get props => [chatId];

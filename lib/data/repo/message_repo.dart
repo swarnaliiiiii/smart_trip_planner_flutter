@@ -9,7 +9,6 @@ class MessageRepository {
 
   MessageRepository(this._isar);
 
-  
   Future<void> addMessage({
     required int chatId,
     required bool isUser,
@@ -37,8 +36,8 @@ class MessageRepository {
         ..recognizedText = recognizedText;
 
       await _isar.writeTxn(() async {
-        session.messages.add(newMessage);
         await _isar.messages.put(newMessage);
+        session.messages.add(newMessage);
         await session.messages.save();
       });
     } catch (e) {
@@ -46,16 +45,14 @@ class MessageRepository {
     }
   }
 
-  
   Future<List<Message>> getMessages(int chatId) async {
     return await _isar.messages
         .filter()
         .chatIdEqualTo(chatId)
-        .sortByTimestampDesc()
+        .sortByTimestamp()
         .findAll();
   }
 
-  // Clear all messages for a session
   Future<void> clearMessages(int chatId) async {
     await _isar.writeTxn(() async {
       final messages = await _isar.messages
@@ -79,14 +76,13 @@ class MessageRepository {
     });
   }
 
-  // Create a new chat session
   Future<int> createNewChatSession() async {
     final maxIdSession = await _isar.chatSessions
         .where()
         .sortByChatIdDesc()
         .findFirst();
 
-    final newChatId = (maxIdSession?.chatId ?? 1) + 1;
+    final newChatId = (maxIdSession?.chatId ?? 0) + 1;
 
     final newSession = ChatSession()
       ..chatId = newChatId
@@ -99,7 +95,6 @@ class MessageRepository {
     return newChatId;
   }
 
-  // Get all chat sessions
   Future<List<ChatSession>> getChatSessions() async {
     final sessions = await _isar.chatSessions.where().sortByChatIdDesc().findAll();
 
@@ -108,23 +103,8 @@ class MessageRepository {
         ..chatId = 1
         ..createdAt = DateTime.now().toIso8601String();
 
-      final welcomeMsg1 = Message()
-        ..chatId = 1
-        ..isUser = true
-        ..message = "Hello"
-        ..timestamp = DateTime.now().toIso8601String();
-
-      final welcomeMsg2 = Message()
-        ..chatId = 1
-        ..isUser = false
-        ..message = "How can I help you today?"
-        ..timestamp = DateTime.now().toIso8601String();
-
       await _isar.writeTxn(() async {
         await _isar.chatSessions.put(defaultSession);
-        await _isar.messages.putAll([welcomeMsg1, welcomeMsg2]);
-        defaultSession.messages.addAll([welcomeMsg1, welcomeMsg2]);
-        await defaultSession.messages.save();
       });
 
       return [defaultSession];
@@ -133,7 +113,6 @@ class MessageRepository {
     return sessions;
   }
 
-  // Delete a session + its messages
   Future<void> deleteChatSession(int chatId) async {
     await _isar.writeTxn(() async {
       final session = await _isar.chatSessions
@@ -151,29 +130,36 @@ class MessageRepository {
     });
   }
 
-  // Store itinerary in session
-  Future<void> updateItinerary(int chatId, Itinerary itinerary) async {
+  Future<void> saveItinerary(int chatId, Itinerary itinerary) async {
     await _isar.writeTxn(() async {
+      await _isar.itineraries.put(itinerary);
+      
       final session = await _isar.chatSessions
           .filter()
           .chatIdEqualTo(chatId)
           .findFirst();
 
       if (session != null) {
-        session.itinerary = itinerary;
-        await _isar.itineraries.put(itinerary);
-        await _isar.chatSessions.put(session);
+        session.itinerary.value = itinerary;
+        await session.itinerary.save();
       }
     });
   }
 
-  // Fetch itinerary from session
   Future<Itinerary?> getItinerary(int chatId) async {
     final session = await _isar.chatSessions
         .filter()
         .chatIdEqualTo(chatId)
         .findFirst();
 
-    return session?.itinerary;
+    if (session != null) {
+      await session.itinerary.load();
+      return session.itinerary.value;
+    }
+    return null;
+  }
+
+  Future<List<Itinerary>> getAllItineraries() async {
+    return await _isar.itineraries.where().sortByCreatedAtDesc().findAll();
   }
 }
