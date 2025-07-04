@@ -17,20 +17,20 @@ class Itinerary {
   
   final days = IsarLinks<ItineraryDay>();
 
-  // Factory constructor for JSON parsing
-  factory Itinerary.fromJson(Map<String, dynamic> json) {
-    final itinerary = Itinerary()
-      ..title = json['title'] ?? ''
-      ..destination = json['destination'] ?? ''
-      ..startDate = json['startDate'] ?? ''
-      ..endDate = json['endDate'] ?? ''
-      ..duration = json['duration'] ?? 0
-      ..budget = json['budget'] ?? ''
-      ..travelStyle = json['travelStyle'] ?? ''
-      ..description = json['description']
-      ..createdAt = DateTime.now().toIso8601String();
+  // Default constructor
+  Itinerary();
 
-    return itinerary;
+  // Named constructor for JSON parsing
+  Itinerary.fromJson(Map<String, dynamic> json) {
+    title = json['title'] ?? '';
+    destination = json['destination'] ?? '';
+    startDate = json['startDate'] ?? '';
+    endDate = json['endDate'] ?? '';
+    duration = json['duration'] ?? 0;
+    budget = json['budget'] ?? '';
+    travelStyle = json['travelStyle'] ?? '';
+    description = json['description'];
+    createdAt = DateTime.now().toIso8601String();
   }
 
   Map<String, dynamic> toJson() {
