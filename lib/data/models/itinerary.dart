@@ -5,6 +5,7 @@ part 'itinerary.g.dart';
 @collection
 class Itinerary {
   Id id = Isar.autoIncrement;
+  
   late String title;
   late String destination;
   late String startDate;
@@ -13,14 +14,14 @@ class Itinerary {
   late String budget;
   late String travelStyle;
   String? description;
+  
+  @Index()
   late String createdAt;
   
   final days = IsarLinks<ItineraryDay>();
 
-  // Default constructor
   Itinerary();
 
-  // Named constructor for JSON parsing
   Itinerary.fromJson(Map<String, dynamic> json) {
     title = json['title'] ?? '';
     destination = json['destination'] ?? '';
@@ -51,6 +52,7 @@ class Itinerary {
 @collection
 class ItineraryDay {
   Id id = Isar.autoIncrement;
+  
   late int dayNumber;
   late String date;
   late String title;
@@ -58,11 +60,14 @@ class ItineraryDay {
   
   final activities = IsarLinks<Activity>();
   final restaurants = IsarLinks<Restaurant>();
+
+  ItineraryDay();
 }
 
 @collection
 class Activity {
   Id id = Isar.autoIncrement;
+  
   late String name;
   late String type;
   String? description;
@@ -73,11 +78,14 @@ class Activity {
   double? rating;
   String? imageUrl;
   bool isRecommended = false;
+
+  Activity();
 }
 
 @collection
 class Restaurant {
   Id id = Isar.autoIncrement;
+  
   late String name;
   late String cuisine;
   String? description;
@@ -87,4 +95,6 @@ class Restaurant {
   double? rating;
   String? imageUrl;
   bool isRecommended = false;
+
+  Restaurant();
 }
