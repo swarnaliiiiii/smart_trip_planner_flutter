@@ -253,9 +253,10 @@ class _ChatScreenState extends State<ChatScreen> {
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                // Follow up functionality
+                                // Start fresh conversation about current itinerary
                                 setState(() {
                                   _currentItinerary = null;
+                                  _messages = []; // Clear previous messages for fresh start
                                 });
                               },
                               icon: Icon(Icons.chat_bubble_outline),
@@ -298,49 +299,105 @@ class _ChatScreenState extends State<ChatScreen> {
             else if (_messages.isEmpty) ...[
               Expanded(
                 child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
                   child: Column(
                     children: [
+                      SizedBox(height: 60.h),
+                      Text(
+                        'What\'s your vision\nfor this trip?',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                      ),
                       SizedBox(height: 40.h),
-                      Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      // Chat input in the middle
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(color: Color(0xFF3BAB8C), width: 2.r),
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              'What\'s your vision\nfor this trip?',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 24.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
+                            Expanded(
+                              child: TextField(
+                                controller: _textController,
+                                maxLines: null,
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  color: Colors.black,
+                                ),
+                                decoration: InputDecoration(
+                                  contentPadding: EdgeInsets.symmetric(
+                                    vertical: 12.r,
+                                    horizontal: 16.r,
+                                  ),
+                                  border: InputBorder.none,
+                                  hintText: 'Describe your ideal trip...',
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                                onSubmitted: (_) => _sendMessage(),
                               ),
                             ),
-                            SizedBox(height: 24.h),
                             Container(
-                              margin: EdgeInsets.symmetric(horizontal: 16.w),
-                              padding: EdgeInsets.all(16.r),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[50],
-                                borderRadius: BorderRadius.circular(12.r),
-                                border: Border.all(color: Colors.grey[200]!),
-                              ),
-                              child: Text(
-                                '7 days in Bali next April, 3 people, mid-range budget, wanted to explore less populated areas, it should be a peaceful trip!',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: Colors.grey[700],
-                                  height: 1.4,
+                              margin: EdgeInsets.all(8.r),
+                              child: GestureDetector(
+                                onTap: _sendMessage,
+                                child: Container(
+                                  width: 40.w,
+                                  height: 40.h,
+                                  decoration: BoxDecoration(
+                                    color: Color(0xFF065F46),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.send,
+                                    color: Colors.white,
+                                    size: 20.sp,
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                      SizedBox(height: 40.h),
+                      SizedBox(height: 16.h),
+                      // Create My Itinerary button right below
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _sendMessage,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF2D7D32),
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: 16.r),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.r),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Create My Itinerary',
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 30.h),
+                      // Saved itineraries at the bottom
                       if (_savedItineraries.isNotEmpty)
                         SavedItinerariesWidget(
                           itineraries: _savedItineraries,
                           onItineraryTap: _openSavedItinerary,
                         ),
+                      SizedBox(height: 20.h),
                     ],
                   ),
                 ),
@@ -360,8 +417,8 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ],
             
-            // Input area
-            if (!_isLoading && _currentItinerary == null)
+            // Input area - only show for follow-up messages
+            if (!_isLoading && _currentItinerary == null && _messages.isNotEmpty)
               Container(
                 padding: EdgeInsets.all(16.r),
                 decoration: BoxDecoration(

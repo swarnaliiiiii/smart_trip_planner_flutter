@@ -45,6 +45,7 @@ class Itinerary {
       'travelStyle': travelStyle,
       'description': description,
       'createdAt': createdAt,
+      'days': days.map((day) => day.toJson()).toList(),
     };
   }
 }
@@ -62,6 +63,24 @@ class ItineraryDay {
   final restaurants = IsarLinks<Restaurant>();
 
   ItineraryDay();
+
+  ItineraryDay.fromJson(Map<String, dynamic> json) {
+    dayNumber = json['dayNumber'] ?? 0;
+    date = json['date'] ?? '';
+    title = json['title'] ?? '';
+    description = json['description'];
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'dayNumber': dayNumber,
+      'date': date,
+      'title': title,
+      'description': description,
+      'activities': activities.map((activity) => activity.toJson()).toList(),
+      'restaurants': restaurants.map((restaurant) => restaurant.toJson()).toList(),
+    };
+  }
 }
 
 @collection
@@ -80,6 +99,34 @@ class Activity {
   bool isRecommended = false;
 
   Activity();
+
+  Activity.fromJson(Map<String, dynamic> json) {
+    name = json['name'] ?? '';
+    type = json['type'] ?? '';
+    description = json['description'];
+    location = json['location'];
+    mapLink = json['mapLink'];
+    timeSlot = json['timeSlot'];
+    estimatedCost = json['estimatedCost']?.toDouble();
+    rating = json['rating']?.toDouble();
+    imageUrl = json['imageUrl'];
+    isRecommended = json['isRecommended'] ?? false;
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'type': type,
+      'description': description,
+      'location': location,
+      'mapLink': mapLink,
+      'timeSlot': timeSlot,
+      'estimatedCost': estimatedCost,
+      'rating': rating,
+      'imageUrl': imageUrl,
+      'isRecommended': isRecommended,
+    };
+  }
 }
 
 @collection
@@ -97,4 +144,31 @@ class Restaurant {
   bool isRecommended = false;
 
   Restaurant();
+
+  Restaurant.fromJson(Map<String, dynamic> json) {
+    name = json['name'] ?? '';
+    cuisine = json['cuisine'] ?? '';
+    description = json['description'];
+    location = json['location'];
+    mapLink = json['mapLink'];
+    priceRange = json['priceRange'];
+    rating = json['rating']?.toDouble();
+    imageUrl = json['imageUrl'];
+    isRecommended = json['isRecommended'] ?? false;
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'cuisine': cuisine,
+      'description': description,
+      'location': location,
+      'mapLink': mapLink,
+      'priceRange': priceRange,
+      'rating': rating,
+      'imageUrl': imageUrl,
+      'isRecommended': isRecommended,
+    };
+  }
 }
+

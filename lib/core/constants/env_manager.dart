@@ -1,11 +1,7 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class EnvManager {
-  static const String apiKey = String.fromEnvironment(
-    'GEMINI_API_KEY', 
-    defaultValue: 'AIzaSyDummy-Replace-With-Your-Real-API-Key'
-  );
+  static String get apiKey => dotenv.env['GEMINI_API_KEY'] ?? 'AIzaSyDummy-Replace-With-Your-Real-API-Key';
   static const String model = 'gemini-1.5-flash';
-  static const String searchApiKey = String.fromEnvironment(
-    'SEARCH_API_KEY', 
-    defaultValue: 'your-search-api-key'
-  );
+  static String get searchApiKey => dotenv.env['SEARCH_API_KEY'] ?? 'your-search-api-key';
 }

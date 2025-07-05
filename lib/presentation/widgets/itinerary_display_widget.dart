@@ -14,7 +14,7 @@ class ItineraryDisplayWidget extends StatelessWidget {
   Future<void> _openInMaps(String location) async {
     final encodedLocation = Uri.encodeComponent(location);
     final url = 'https://maps.google.com/?q=$encodedLocation';
-    
+
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     }
@@ -32,9 +32,9 @@ class ItineraryDisplayWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          // Header - Fixed height
           Container(
-            padding: EdgeInsets.all(16.r),
+            padding: EdgeInsets.all(10.r),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -58,7 +58,7 @@ class ItineraryDisplayWidget extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(height: 8.h),
+                SizedBox(height: 1.h),
                 Text(
                   itinerary.destination,
                   style: TextStyle(
@@ -66,25 +66,30 @@ class ItineraryDisplayWidget extends StatelessWidget {
                     color: Colors.grey[600],
                   ),
                 ),
-                SizedBox(height: 12.h),
+                SizedBox(height: 10.h),
+                // Fixed: Wrap Row in Flexible to prevent horizontal overflow
                 Row(
                   children: [
-                    _buildInfoChip(
-                      icon: Icons.calendar_today,
-                      text: '${itinerary.duration} days',
+                    Flexible(
+                      child: _buildInfoChip(
+                        icon: Icons.calendar_today,
+                        text: '${itinerary.duration} days',
+                      ),
                     ),
-                    SizedBox(width: 12.w),
-                    _buildInfoChip(
-                      icon: Icons.attach_money,
-                      text: itinerary.budget,
+                    SizedBox(width: 8.w), // Increased spacing
+                    Flexible(
+                      child: _buildInfoChip(
+                        icon: Icons.attach_money,
+                        text: itinerary.budget,
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          
-          // Open in Maps button
+
+          // Open in Maps button - Fixed height
           Container(
             margin: EdgeInsets.symmetric(horizontal: 16.w),
             child: GestureDetector(
@@ -118,10 +123,10 @@ class ItineraryDisplayWidget extends StatelessWidget {
               ),
             ),
           ),
-          
+
           SizedBox(height: 16.h),
-          
-          // Days list
+
+          // Days list - Fixed: Use Expanded instead of fixed height
           Expanded(
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 16.w),
@@ -165,77 +170,82 @@ class ItineraryDisplayWidget extends StatelessWidget {
                           ),
                         ],
                         SizedBox(height: 12.h),
-                        
+
                         // Activities
-                        ...day.activities.map((activity) => Container(
-                          margin: EdgeInsets.only(bottom: 8.h),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 6.w,
-                                height: 6.h,
-                                margin: EdgeInsets.only(top: 6.h, right: 8.w),
-                                decoration: BoxDecoration(
-                                  color: Color(0xFF065F46),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            activity.name,
-                                            style: TextStyle(
-                                              fontSize: 14.sp,
-                                              fontWeight: FontWeight.w500,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                        ),
-                                        if (activity.location != null)
-                                          GestureDetector(
-                                            onTap: () => _openInMaps(activity.location!),
-                                            child: Icon(
-                                              Icons.map_outlined,
-                                              size: 16.sp,
-                                              color: Color(0xFF2196F3),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    if (activity.description != null) ...[
-                                      SizedBox(height: 4.h),
-                                      Text(
-                                        activity.description!,
-                                        style: TextStyle(
-                                          fontSize: 12.sp,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
-                                    if (activity.timeSlot != null) ...[
-                                      SizedBox(height: 4.h),
-                                      Text(
-                                        activity.timeSlot!,
-                                        style: TextStyle(
-                                          fontSize: 12.sp,
+                        ...day.activities
+                            .map((activity) => Container(
+                                  margin: EdgeInsets.only(bottom: 8.h),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        width: 6.w,
+                                        height: 6.h,
+                                        margin:
+                                            EdgeInsets.only(top: 6.h, right: 8.w),
+                                        decoration: BoxDecoration(
                                           color: Color(0xFF065F46),
-                                          fontWeight: FontWeight.w500,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    activity.name,
+                                                    style: TextStyle(
+                                                      fontSize: 14.sp,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: Colors.black87,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (activity.location != null)
+                                                  GestureDetector(
+                                                    onTap: () => _openInMaps(
+                                                        activity.location!),
+                                                    child: Icon(
+                                                      Icons.map_outlined,
+                                                      size: 16.sp,
+                                                      color: Color(0xFF2196F3),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                            if (activity.description != null) ...[
+                                              SizedBox(height: 4.h),
+                                              Text(
+                                                activity.description!,
+                                                style: TextStyle(
+                                                  fontSize: 12.sp,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                            if (activity.timeSlot != null) ...[
+                                              SizedBox(height: 4.h),
+                                              Text(
+                                                activity.timeSlot!,
+                                                style: TextStyle(
+                                                  fontSize: 12.sp,
+                                                  color: Color(0xFF065F46),
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       ),
                                     ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )).toList(),
-                        
+                                  ),
+                                ))
+                            .toList(),
+
                         // Restaurants
                         if (day.restaurants.isNotEmpty) ...[
                           SizedBox(height: 8.h),
@@ -248,37 +258,40 @@ class ItineraryDisplayWidget extends StatelessWidget {
                             ),
                           ),
                           SizedBox(height: 4.h),
-                          ...day.restaurants.map((restaurant) => Container(
-                            margin: EdgeInsets.only(bottom: 4.h),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.restaurant,
-                                  size: 14.sp,
-                                  color: Colors.orange,
-                                ),
-                                SizedBox(width: 8.w),
-                                Expanded(
-                                  child: Text(
-                                    '${restaurant.name} (${restaurant.cuisine})',
-                                    style: TextStyle(
-                                      fontSize: 12.sp,
-                                      color: Colors.grey[700],
+                          ...day.restaurants
+                              .map((restaurant) => Container(
+                                    margin: EdgeInsets.only(bottom: 4.h),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.restaurant,
+                                          size: 14.sp,
+                                          color: Colors.orange,
+                                        ),
+                                        SizedBox(width: 8.w),
+                                        Expanded(
+                                          child: Text(
+                                            '${restaurant.name} (${restaurant.cuisine})',
+                                            style: TextStyle(
+                                              fontSize: 12.sp,
+                                              color: Colors.grey[700],
+                                            ),
+                                          ),
+                                        ),
+                                        if (restaurant.location != null)
+                                          GestureDetector(
+                                            onTap: () =>
+                                                _openInMaps(restaurant.location!),
+                                            child: Icon(
+                                              Icons.map_outlined,
+                                              size: 14.sp,
+                                              color: Color(0xFF2196F3),
+                                            ),
+                                          ),
+                                      ],
                                     ),
-                                  ),
-                                ),
-                                if (restaurant.location != null)
-                                  GestureDetector(
-                                    onTap: () => _openInMaps(restaurant.location!),
-                                    child: Icon(
-                                      Icons.map_outlined,
-                                      size: 14.sp,
-                                      color: Color(0xFF2196F3),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          )).toList(),
+                                  ))
+                              .toList(),
                         ],
                       ],
                     ),
@@ -287,7 +300,7 @@ class ItineraryDisplayWidget extends StatelessWidget {
               ),
             ),
           ),
-          
+
           SizedBox(height: 16.h),
         ],
       ),
@@ -310,11 +323,14 @@ class ItineraryDisplayWidget extends StatelessWidget {
             color: Colors.grey[600],
           ),
           SizedBox(width: 4.w),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: Colors.grey[600],
+          Flexible(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: Colors.grey[600],
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

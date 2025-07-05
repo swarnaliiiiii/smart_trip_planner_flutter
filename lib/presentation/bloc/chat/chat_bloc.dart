@@ -80,6 +80,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     await _messageRepository.saveItinerary(chatId, itinerary);
   }
 
+  // ADDED: Method to get itinerary for a specific chat
+  Future<Itinerary?> getItinerary(int chatId) async {
+    return await _messageRepository.getItinerary(chatId);
+  }
+
   Future<void> _onDeleteChatSession(
       DeleteChatSessionEvent event, Emitter<ChatState> emit) async {
     try {
@@ -91,55 +96,100 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   Future<void> _onGenerateItinerary(
-      GenerateItineraryEvent event, Emitter<ChatState> emit) async {
-    emit(ChatLoading());
-    try {
-      if (!await NetworkManager.isConnected()) {
-        emit(ChatFailure("No internet connection"));
-        return;
-      }
+    GenerateItineraryEvent event, Emitter<ChatState> emit) async {
+  emit(ChatLoading());
+  try {
+    if (!await NetworkManager.isConnected()) {
+      emit(ChatFailure("No internet connection"));
+      return;
+    }
 
+    await _messageRepository.addMessage(
+      chatId: event.chatId,
+      isUser: true,
+      message: event.prompt,
+      timestamp: DateTime.now().toIso8601String(),
+    );
+    emit(ChatSendSuccess());
+
+    final response = await _webService.generateItinerary(event.prompt);
+    if (response != null) {
       await _messageRepository.addMessage(
         chatId: event.chatId,
-        isUser: true,
-        message: event.prompt,
+        isUser: false,
+        message: response,
         timestamp: DateTime.now().toIso8601String(),
       );
-      emit(ChatSendSuccess());
 
-      final response = await _webService.generateItinerary(event.prompt);
-      if (response != null) {
-        await _messageRepository.addMessage(
-          chatId: event.chatId,
-          isUser: false,
-          message: response,
-          timestamp: DateTime.now().toIso8601String(),
-        );
-
+      try {
+        log("Raw response: $response");
+        
+        Map<String, dynamic> parsedJson;
+        
         try {
+          parsedJson = jsonDecode(response);
+        } catch (e) {
+          
           final jsonStart = response.indexOf('{');
           final jsonEnd = response.lastIndexOf('}') + 1;
+          
           if (jsonStart != -1 && jsonEnd > jsonStart) {
             final jsonString = response.substring(jsonStart, jsonEnd);
-            final parsedJson = jsonDecode(jsonString);
-            final itinerary = Itinerary.fromJson(parsedJson);
-            
-            emit(ItineraryReceivedSuccess(itinerary));
+            log("Extracted JSON: $jsonString");
+            parsedJson = jsonDecode(jsonString);
           } else {
+            
+            log("No JSON found in response");
             emit(ChatReciveSuccess(response));
+            return;
           }
-        } catch (e) {
-          log("JSON parsing error: $e");
+        }
+        
+        
+        if (parsedJson.containsKey('title') && 
+            parsedJson.containsKey('destination') && 
+            parsedJson.containsKey('days')) {
+          
+          // FIXED: Save the itinerary to database using the new method
+          try {
+            await _messageRepository.saveItineraryFromJson(event.chatId, response);
+            log("Itinerary saved to database successfully");
+            
+            // Get the saved itinerary from database to ensure it's properly loaded
+            final savedItinerary = await _messageRepository.getItinerary(event.chatId);
+            if (savedItinerary != null) {
+              log("Retrieved saved itinerary: ${savedItinerary.title} with ${savedItinerary.days.length} days");
+              emit(ItineraryReceivedSuccess(savedItinerary));
+            } else {
+              log("Failed to retrieve saved itinerary");
+              // Fallback to creating from JSON
+              final itinerary = Itinerary.fromJson(parsedJson);
+              emit(ItineraryReceivedSuccess(itinerary));
+            }
+          } catch (saveError) {
+            log("Error saving itinerary: $saveError");
+            // Fallback to creating from JSON without saving
+            final itinerary = Itinerary.fromJson(parsedJson);
+            emit(ItineraryReceivedSuccess(itinerary));
+          }
+        } else {
+          log("JSON doesn't contain required itinerary fields");
           emit(ChatReciveSuccess(response));
         }
-      } else {
-        emit(ChatFailure("Failed to get a response"));
+        
+      } catch (e) {
+        log("JSON parsing error: $e");
+        log("Response that failed to parse: $response");
+        emit(ChatReciveSuccess(response));
       }
-    } catch (error) {
-      log(error.toString());
-      emit(ChatFailure("Failed to generate itinerary"));
+    } else {
+      emit(ChatFailure("Failed to get a response"));
     }
+  } catch (error) {
+    log("GenerateItinerary error: $error");
+    emit(ChatFailure("Failed to generate itinerary"));
   }
+}
 
   Future<void> _onPostData(PostDataEvent event, Emitter<ChatState> emit) async {
     emit(ChatLoading());
@@ -186,62 +236,112 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   }
 
   Future<void> _onStreamData(StreamDataEvent event, Emitter<ChatState> emit) async {
-    emit(ChatLoading());
-    final StringBuffer fullResponse = StringBuffer();
+  emit(ChatLoading());
+  final StringBuffer fullResponse = StringBuffer();
 
+  try {
+    if (!await NetworkManager.isConnected()) {
+      emit(ChatFailure("No internet connection"));
+      return;
+    }
+
+    await _messageRepository.addMessage(
+      chatId: event.chatId,
+      isUser: true,
+      message: event.prompt,
+      timestamp: DateTime.now().toIso8601String(),
+    );
+    emit(ChatSendSuccess());
+
+    final messages = await _messageRepository.getMessages(event.chatId);
+    final contents = messages.map((msg) {
+      if (msg == messages.last && event.recognizedText != null) {
+        return ai.Content.text(
+          "${msg.message}\n\n[Recognized Text]: ${event.recognizedText}",
+        );
+      } else {
+        return ai.Content.text(msg.message);
+      }
+    }).toList();
+
+    await for (final chunk in _webService.streamData(contents)) {
+      if (chunk != null) {
+        fullResponse.write(chunk);
+        await Future.delayed(Duration(milliseconds: 200));
+        emit(ChatStreaming(chunk));
+      }
+    }
+
+    await Future.delayed(Duration(milliseconds: 500));
+    final completeResponse = fullResponse.toString();
+
+    await _messageRepository.addMessage(
+      chatId: event.chatId,
+      isUser: false,
+      message: completeResponse,
+      timestamp: DateTime.now().toIso8601String(),
+    );
+
+    // Enhanced JSON parsing for streaming
     try {
-      if (!await NetworkManager.isConnected()) {
-        emit(ChatFailure("No internet connection"));
-        return;
-      }
-
-      await _messageRepository.addMessage(
-        chatId: event.chatId,
-        isUser: true,
-        message: event.prompt,
-        timestamp: DateTime.now().toIso8601String(),
-      );
-      emit(ChatSendSuccess());
-
-      final messages = await _messageRepository.getMessages(event.chatId);
-      final contents = messages.map((msg) {
-        if (msg == messages.last && event.recognizedText != null) {
-          return ai.Content.text(
-            "${msg.message}\n\n[Recognized Text]: ${event.recognizedText}",
-          );
-        } else {
-          return ai.Content.text(msg.message);
-        }
-      }).toList();
-
-      await for (final chunk in _webService.streamData(contents)) {
-        if (chunk != null) {
-          fullResponse.write(chunk);
-          await Future.delayed(Duration(milliseconds: 200));
-          emit(ChatStreaming(chunk));
-        }
-      }
-
-      await Future.delayed(Duration(milliseconds: 500));
-      final completeResponse = fullResponse.toString();
-
-      await _messageRepository.addMessage(
-        chatId: event.chatId,
-        isUser: false,
-        message: completeResponse,
-        timestamp: DateTime.now().toIso8601String(),
-      );
-
+      log("Complete streaming response: $completeResponse");
+      
+      Map<String, dynamic> parsedJson;
+      
       try {
-        final parsedJson = jsonDecode(completeResponse);
-        final itinerary = Itinerary.fromJson(parsedJson);
-        emit(ItineraryReceivedSuccess(itinerary));
+        parsedJson = jsonDecode(completeResponse);
       } catch (e) {
+        // Extract JSON from response
+        final jsonStart = completeResponse.indexOf('{');
+        final jsonEnd = completeResponse.lastIndexOf('}') + 1;
+        
+        if (jsonStart != -1 && jsonEnd > jsonStart) {
+          final jsonString = completeResponse.substring(jsonStart, jsonEnd);
+          parsedJson = jsonDecode(jsonString);
+        } else {
+          emit(ChatReciveSuccess(completeResponse));
+          return;
+        }
+      }
+      
+      // Validate and create itinerary
+      if (parsedJson.containsKey('title') && 
+          parsedJson.containsKey('destination') && 
+          parsedJson.containsKey('days')) {
+        
+        // FIXED: Save the itinerary to database using the new method
+        try {
+          await _messageRepository.saveItineraryFromJson(event.chatId, completeResponse);
+          log("Streaming itinerary saved to database successfully");
+          
+          // Get the saved itinerary from database to ensure it's properly loaded
+          final savedItinerary = await _messageRepository.getItinerary(event.chatId);
+          if (savedItinerary != null) {
+            log("Retrieved saved streaming itinerary: ${savedItinerary.title} with ${savedItinerary.days.length} days");
+            emit(ItineraryReceivedSuccess(savedItinerary));
+          } else {
+            log("Failed to retrieve saved streaming itinerary");
+            // Fallback to creating from JSON
+            final itinerary = Itinerary.fromJson(parsedJson);
+            emit(ItineraryReceivedSuccess(itinerary));
+          }
+        } catch (saveError) {
+          log("Error saving streaming itinerary: $saveError");
+          // Fallback to creating from JSON without saving
+          final itinerary = Itinerary.fromJson(parsedJson);
+          emit(ItineraryReceivedSuccess(itinerary));
+        }
+      } else {
         emit(ChatReciveSuccess(completeResponse));
       }
-    } catch (error) {
-      log("StreamData Error: $error");
-      emit(ChatFailure("Failed to get a response"));
+      
+    } catch (e) {
+      log("Stream JSON parsing error: $e");
+      emit(ChatReciveSuccess(completeResponse));
     }
+  } catch (error) {
+    log("StreamData Error: $error");
+    emit(ChatFailure("Failed to get a response"));
   }
+}
 }
