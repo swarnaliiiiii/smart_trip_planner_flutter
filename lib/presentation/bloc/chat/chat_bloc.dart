@@ -72,6 +72,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     return await _messageRepository.getChatSessions();
   }
 
+  Future<List<Itinerary>> getAllItineraries() async {
+    return await _messageRepository.getAllItineraries();
+  }
+
+  Future<void> saveItinerary(int chatId, Itinerary itinerary) async {
+    await _messageRepository.saveItinerary(chatId, itinerary);
+  }
+
   Future<void> _onDeleteChatSession(
       DeleteChatSessionEvent event, Emitter<ChatState> emit) async {
     try {
@@ -116,7 +124,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             final parsedJson = jsonDecode(jsonString);
             final itinerary = Itinerary.fromJson(parsedJson);
             
-            await _messageRepository.saveItinerary(event.chatId, itinerary);
             emit(ItineraryReceivedSuccess(itinerary));
           } else {
             emit(ChatReciveSuccess(response));
@@ -228,7 +235,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       try {
         final parsedJson = jsonDecode(completeResponse);
         final itinerary = Itinerary.fromJson(parsedJson);
-        await _messageRepository.saveItinerary(event.chatId, itinerary);
         emit(ItineraryReceivedSuccess(itinerary));
       } catch (e) {
         emit(ChatReciveSuccess(completeResponse));
