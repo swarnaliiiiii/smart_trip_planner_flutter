@@ -28,7 +28,6 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isConversationMode = false;
   int? _conversationChatId;
 
-
   @override
   void initState() {
     super.initState();
@@ -37,15 +36,15 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _loadMessages() async {
-  final chatBloc = context.read<ChatBloc>();
-  final chatId = _isConversationMode && _conversationChatId != null 
-      ? _conversationChatId! 
-      : chatBloc.currentChatId;
-  final messages = await chatBloc.getMessages(chatId);
-  setState(() {
-    _messages = messages;
-  });
- }
+    final chatBloc = context.read<ChatBloc>();
+    final chatId = _isConversationMode && _conversationChatId != null 
+        ? _conversationChatId! 
+        : chatBloc.currentChatId;
+    final messages = await chatBloc.getMessages(chatId);
+    setState(() {
+      _messages = messages;
+    });
+  }
 
   void _loadSavedItineraries() async {
     final chatBloc = context.read<ChatBloc>();
@@ -67,29 +66,29 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-void _sendMessage() {
-  final text = _textController.text.trim();
-  if (text.isEmpty) return;
+  void _sendMessage() {
+    final text = _textController.text.trim();
+    if (text.isEmpty) return;
 
-  final chatBloc = context.read<ChatBloc>();
-  
-  if (_isConversationMode && _conversationChatId != null) {
-    // In conversation mode, send as a follow-up question
-    chatBloc.add(PostDataEvent(
-      prompt: text,
-      chatId: _conversationChatId!,
-      isUser: true,
-    ));
-  } else {
-    // Normal itinerary generation
-    chatBloc.add(GenerateItineraryEvent(
-      prompt: text,
-      chatId: chatBloc.currentChatId,
-    ));
+    final chatBloc = context.read<ChatBloc>();
+    
+    if (_isConversationMode && _conversationChatId != null) {
+      // In conversation mode, send as a follow-up question
+      chatBloc.add(PostDataEvent(
+        prompt: text,
+        chatId: _conversationChatId!,
+        isUser: true,
+      ));
+    } else {
+      // Normal itinerary generation
+      chatBloc.add(GenerateItineraryEvent(
+        prompt: text,
+        chatId: chatBloc.currentChatId,
+      ));
+    }
+
+    _textController.clear();
   }
-
-  _textController.clear();
-}
 
   void _saveItinerary() async {
     if (_currentItinerary != null) {
@@ -107,51 +106,71 @@ void _sendMessage() {
   }
 
   void _openSavedItinerary(Itinerary itinerary) async {
-  
-  final chatBloc = context.read<ChatBloc>();
-  final newChatId = await chatBloc.createNewChatSession();
-  
-  setState(() {
-    _currentItinerary = itinerary;
-    _messages = [];
-    _isConversationMode = true;
-    _conversationChatId = newChatId;
-  });
-  await chatBloc.addSystemMessage(
-    newChatId,
-    "I'm helping you modify this itinerary: ${itinerary.title} for ${itinerary.destination}. You can ask me to add activities, change restaurants, modify timings, or make any other adjustments."
-  );
-}
-
-void _regenerateResponse() {
-  if (_messages.isNotEmpty) {
-    final lastUserMessage = _messages.lastWhere((msg) => msg.isUser);
     final chatBloc = context.read<ChatBloc>();
+    final newChatId = await chatBloc.createNewChatSession();
     
-    // Remove the last AI response
     setState(() {
-      _messages.removeWhere((msg) => !msg.isUser && 
-        _messages.indexOf(msg) > _messages.indexOf(lastUserMessage));
+      _currentItinerary = itinerary;
+      _messages = [];
+      _isConversationMode = true;
+      _conversationChatId = newChatId;
     });
-    
-    // Regenerate response for the last user message
-    chatBloc.add(GenerateItineraryEvent(
-      prompt: lastUserMessage.message,
-      chatId: _conversationChatId ?? chatBloc.currentChatId,
-    ));
-  }
-}
 
-void _copyMessage(String content) {
-  Clipboard.setData(ClipboardData(text: content));
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('Copied to clipboard'),
-      backgroundColor: Color(0xFF065F46),
-      duration: Duration(seconds: 2),
-    ),
-  );
-}
+    await chatBloc.addSystemMessage(
+      newChatId,
+      "I'm helping you modify this itinerary: ${itinerary.title} for ${itinerary.destination}. You can ask me to add activities, change restaurants, modify timings, or make any other adjustments."
+    );
+
+    _loadMessages();
+  }
+
+  void _regenerateResponse() {
+    if (_messages.isNotEmpty) {
+      final lastUserMessage = _messages.lastWhere((msg) => msg.isUser);
+      final chatBloc = context.read<ChatBloc>();
+      
+      // Remove the last AI response
+      setState(() {
+        _messages.removeWhere((msg) => !msg.isUser && 
+          _messages.indexOf(msg) > _messages.indexOf(lastUserMessage));
+      });
+      
+      // Regenerate response for the last user message
+      if (_isConversationMode && _conversationChatId != null) {
+        chatBloc.add(PostDataEvent(
+          prompt: lastUserMessage.message,
+          chatId: _conversationChatId!,
+          isUser: true,
+        ));
+      } else {
+        chatBloc.add(GenerateItineraryEvent(
+          prompt: lastUserMessage.message,
+          chatId: chatBloc.currentChatId,
+        ));
+      }
+    }
+  }
+
+  void _copyMessage(String content) {
+    Clipboard.setData(ClipboardData(text: content));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Copied to clipboard'),
+        backgroundColor: Color(0xFF065F46),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _exitConversationMode() {
+    setState(() {
+      _isConversationMode = false;
+      _conversationChatId = null;
+      _currentItinerary = null;
+      _messages = [];
+    });
+    _loadSavedItineraries();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -163,13 +182,17 @@ void _copyMessage(String content) {
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.dark,
         ),
-        leading: _messages.isNotEmpty || _currentItinerary != null
+        leading: (_messages.isNotEmpty || _currentItinerary != null || _isConversationMode)
             ? IconButton(
                 onPressed: () {
-                  setState(() {
-                    _messages = [];
-                    _currentItinerary = null;
-                  });
+                  if (_isConversationMode) {
+                    _exitConversationMode();
+                  } else {
+                    setState(() {
+                      _messages = [];
+                      _currentItinerary = null;
+                    });
+                  }
                 },
                 icon: Icon(
                   Icons.arrow_back,
@@ -179,22 +202,27 @@ void _copyMessage(String content) {
             : null,
         title: Row(
           children: [
-            Text(
-              _currentItinerary != null 
-                  ? 'Itinerary Created 🎉'
-                  : _isLoading 
-                      ? 'Creating Itinerary...'
-                      : _messages.isNotEmpty 
-                          ? 'TalkTrip'
-                          : 'Hey Shubham 👋',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF065F46),
+            Expanded(
+              child: Text(
+                _isConversationMode && _currentItinerary != null
+                    ? 'Modifying: ${_currentItinerary!.title}'
+                    : _currentItinerary != null 
+                        ? 'Itinerary Created 🎉'
+                        : _isLoading 
+                            ? 'Creating Itinerary...'
+                            : _messages.isNotEmpty 
+                                ? 'TalkTrip'
+                                : 'Hey Shubham 👋',
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF065F46),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            Spacer(),
-            if (_messages.isEmpty && _currentItinerary == null)
+            if (_messages.isEmpty && _currentItinerary == null && !_isConversationMode)
               IconButton(
                 onPressed: () {
                   context.read<ChatBloc>().add(CreateNewChatSessionEvent());
@@ -208,52 +236,55 @@ void _copyMessage(String content) {
         ),
       ),
       body: BlocListener<ChatBloc, ChatState>(
-         listener: (context, state) {
-    if (state is ChatSendSuccess) {
-      _loadMessages();
-      _scrollToBottom();
-      setState(() {
-        _isThinking = true;
-      });
-    } else if (state is ChatLoading) {
-      setState(() {
-        _isLoading = true;
-        _isThinking = false;
-      });
-    } else if (state is ItineraryReceivedSuccess) {
-      setState(() {
-        _isLoading = false;
-        _isThinking = false;
-        if (!_isConversationMode) {
-          _currentItinerary = state.itinerary;
-        }
-      });
-      _loadMessages();
-      _scrollToBottom();
-    } else if (state is ChatReciveSuccess) {
-      setState(() {
-        _isLoading = false;
-        _isThinking = false;
-      });
-      _loadMessages();
-      _scrollToBottom();
-    } else if (state is ChatFailure) {
-      setState(() {
-        _isLoading = false;
-        _isThinking = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(state.error)),
-      );
-    } else if (state is NewChatSessionCreated) {
-      if (!_isConversationMode) {
-        setState(() {
-          _messages = [];
-          _currentItinerary = null;
-        });
-      }
-    }
-  },
+        listener: (context, state) {
+          if (state is ChatSendSuccess) {
+            _loadMessages();
+            _scrollToBottom();
+            setState(() {
+              _isThinking = true;
+            });
+          } else if (state is ChatLoading) {
+            setState(() {
+              _isLoading = true;
+              _isThinking = false;
+            });
+          } else if (state is ItineraryReceivedSuccess) {
+            setState(() {
+              _isLoading = false;
+              _isThinking = false;
+              if (!_isConversationMode) {
+                _currentItinerary = state.itinerary;
+              } else {
+                // Update the current itinerary in conversation mode
+                _currentItinerary = state.itinerary;
+              }
+            });
+            _loadMessages();
+            _scrollToBottom();
+          } else if (state is ChatReciveSuccess) {
+            setState(() {
+              _isLoading = false;
+              _isThinking = false;
+            });
+            _loadMessages();
+            _scrollToBottom();
+          } else if (state is ChatFailure) {
+            setState(() {
+              _isLoading = false;
+              _isThinking = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.error)),
+            );
+          } else if (state is NewChatSessionCreated) {
+            if (!_isConversationMode) {
+              setState(() {
+                _messages = [];
+                _currentItinerary = null;
+              });
+            }
+          }
+        },
         child: Column(
           children: [
             // Loading overlay
@@ -276,7 +307,9 @@ void _copyMessage(String content) {
                       ),
                       SizedBox(height: 24.h),
                       Text(
-                        'Curating a perfect plan for you...',
+                        _isConversationMode 
+                            ? 'Updating your itinerary...'
+                            : 'Curating a perfect plan for you...',
                         style: TextStyle(
                           fontSize: 16.sp,
                           color: Colors.grey[600],
@@ -286,8 +319,8 @@ void _copyMessage(String content) {
                   ),
                 ),
               )
-            // Show itinerary if created
-            else if (_currentItinerary != null)
+            // Show itinerary if created (and not in conversation mode)
+            else if (_currentItinerary != null && !_isConversationMode)
               Expanded(
                 child: Column(
                   children: [
@@ -321,13 +354,14 @@ void _copyMessage(String content) {
                                   _isConversationMode = true;
                                   _conversationChatId = newChatId;
                                   _messages = [];
-                                  _currentItinerary = null;
                                 });
 
                                 await chatBloc.addSystemMessage(
                                   newChatId,
                                   "I'm helping you refine this itinerary: ${_currentItinerary!.title} for ${_currentItinerary!.destination}. You can ask me to add activities, change restaurants, modify timings, or make any other adjustments."
                                 );
+
+                                _loadMessages();
                               },
                               icon: Icon(Icons.chat_bubble_outline),
                               label: Text('Follow up to refine'),
@@ -360,6 +394,45 @@ void _copyMessage(String content) {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            // Show conversation mode (chat + itinerary side by side or stacked)
+            else if (_isConversationMode && _currentItinerary != null)
+              Expanded(
+                child: Column(
+                  children: [
+                    // Show current itinerary at the top
+                    Container(
+                      height: 200.h,
+                      child: ItineraryDisplayWidget(
+                        itinerary: _currentItinerary!,
+                      ),
+                    ),
+                    Divider(height: 1, color: Colors.grey[300]),
+                    // Show chat messages below
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: EdgeInsets.symmetric(vertical: 8.h),
+                        itemCount: _messages.length + (_isThinking ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == _messages.length && _isThinking) {
+                            return ThinkingBubbleWidget();
+                          }
+                          final message = _messages[index];
+                          final isLastAIMessage = !message.isUser && 
+                              index == _messages.length - 1 && 
+                              !_isThinking;
+                          return ChatMessageWidget(
+                            message: message,
+                            onCopy: () => _copyMessage(message.message),
+                            onRegenerate: isLastAIMessage ? _regenerateResponse : null,
+                            isLastMessage: isLastAIMessage,
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -475,28 +548,28 @@ void _copyMessage(String content) {
             ] else ...[
               Expanded(
                 child: ListView.builder(
-                controller: _scrollController,
-                itemCount: _messages.length + (_isThinking ? 1 : 0),
-                itemBuilder: (context, index) {
-                if (index == _messages.length && _isThinking) {
-                 return ThinkingBubbleWidget();
-              }
-              final message = _messages[index];
-              final isLastAIMessage = !message.isUser && 
-              index == _messages.length - 1 && 
-              !_isThinking;
-              return ChatMessageWidget(
-                message: message,
-                onCopy: () => _copyMessage(message.message),
-                onRegenerate: isLastAIMessage ? _regenerateResponse : null,
-                isLastMessage: isLastAIMessage,
-              );
-            },
-          ),
-        ),
-      ],
+                  controller: _scrollController,
+                  itemCount: _messages.length + (_isThinking ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == _messages.length && _isThinking) {
+                      return ThinkingBubbleWidget();
+                    }
+                    final message = _messages[index];
+                    final isLastAIMessage = !message.isUser && 
+                        index == _messages.length - 1 && 
+                        !_isThinking;
+                    return ChatMessageWidget(
+                      message: message,
+                      onCopy: () => _copyMessage(message.message),
+                      onRegenerate: isLastAIMessage ? _regenerateResponse : null,
+                      isLastMessage: isLastAIMessage,
+                    );
+                  },
+                ),
+              ),
+            ],
             
-            // Input area - only show for follow-up messages
+            // Input area - show for follow-up messages and conversation mode
             if (!_isLoading && _currentItinerary == null && (_messages.isNotEmpty || _isConversationMode))
               Container(
                 padding: EdgeInsets.all(16.r),
@@ -534,9 +607,11 @@ void _copyMessage(String content) {
                                   horizontal: 16.r,
                                 ),
                                 border: InputBorder.none,
-                                hintText: _messages.isEmpty 
-                                    ? 'Describe your ideal trip...'
-                                    : 'Ask follow-up questions...',
+                                hintText: _isConversationMode
+                                    ? 'Ask to modify the itinerary...'
+                                    : _messages.isEmpty 
+                                        ? 'Describe your ideal trip...'
+                                        : 'Ask follow-up questions...',
                                 hintStyle: TextStyle(
                                   color: Colors.grey[500],
                                 ),
@@ -566,7 +641,7 @@ void _copyMessage(String content) {
                         ],
                       ),
                     ),
-                    if (_messages.isEmpty) ...[
+                    if (_messages.isEmpty && !_isConversationMode) ...[
                       SizedBox(height: 16.h),
                       SizedBox(
                         width: double.infinity,

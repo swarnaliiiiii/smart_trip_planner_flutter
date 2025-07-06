@@ -80,7 +80,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     await _messageRepository.saveItinerary(chatId, itinerary);
   }
 
-  // ADDED: Method to get itinerary for a specific chat
   Future<Itinerary?> getItinerary(int chatId) async {
     return await _messageRepository.getItinerary(chatId);
   }
@@ -150,25 +149,21 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             parsedJson.containsKey('destination') && 
             parsedJson.containsKey('days')) {
           
-          // FIXED: Save the itinerary to database using the new method
           try {
             await _messageRepository.saveItineraryFromJson(event.chatId, response);
             log("Itinerary saved to database successfully");
             
-            // Get the saved itinerary from database to ensure it's properly loaded
             final savedItinerary = await _messageRepository.getItinerary(event.chatId);
             if (savedItinerary != null) {
               log("Retrieved saved itinerary: ${savedItinerary.title} with ${savedItinerary.days.length} days");
               emit(ItineraryReceivedSuccess(savedItinerary));
             } else {
               log("Failed to retrieve saved itinerary");
-              // Fallback to creating from JSON
               final itinerary = Itinerary.fromJson(parsedJson);
               emit(ItineraryReceivedSuccess(itinerary));
             }
           } catch (saveError) {
             log("Error saving itinerary: $saveError");
-            // Fallback to creating from JSON without saving
             final itinerary = Itinerary.fromJson(parsedJson);
             emit(ItineraryReceivedSuccess(itinerary));
           }
@@ -225,7 +220,58 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           message: response,
           timestamp: DateTime.now().toIso8601String(),
         );
-        emit(ChatReciveSuccess(response));
+
+        // Check if response contains itinerary JSON
+        try {
+          log("PostData response: $response");
+          
+          Map<String, dynamic> parsedJson;
+          
+          try {
+            parsedJson = jsonDecode(response);
+          } catch (e) {
+            final jsonStart = response.indexOf('{');
+            final jsonEnd = response.lastIndexOf('}') + 1;
+            
+            if (jsonStart != -1 && jsonEnd > jsonStart) {
+              final jsonString = response.substring(jsonStart, jsonEnd);
+              parsedJson = jsonDecode(jsonString);
+            } else {
+              emit(ChatReciveSuccess(response));
+              return;
+            }
+          }
+          
+          if (parsedJson.containsKey('title') && 
+              parsedJson.containsKey('destination') && 
+              parsedJson.containsKey('days')) {
+            
+            try {
+              await _messageRepository.saveItineraryFromJson(event.chatId, response);
+              log("PostData itinerary saved to database successfully");
+              
+              final savedItinerary = await _messageRepository.getItinerary(event.chatId);
+              if (savedItinerary != null) {
+                log("Retrieved saved PostData itinerary: ${savedItinerary.title} with ${savedItinerary.days.length} days");
+                emit(ItineraryReceivedSuccess(savedItinerary));
+              } else {
+                log("Failed to retrieve saved PostData itinerary");
+                final itinerary = Itinerary.fromJson(parsedJson);
+                emit(ItineraryReceivedSuccess(itinerary));
+              }
+            } catch (saveError) {
+              log("Error saving PostData itinerary: $saveError");
+              final itinerary = Itinerary.fromJson(parsedJson);
+              emit(ItineraryReceivedSuccess(itinerary));
+            }
+          } else {
+            emit(ChatReciveSuccess(response));
+          }
+          
+        } catch (e) {
+          log("PostData JSON parsing error: $e");
+          emit(ChatReciveSuccess(response));
+        }
       } else {
         emit(ChatFailure("Failed to get a response"));
       }
@@ -309,25 +355,21 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           parsedJson.containsKey('destination') && 
           parsedJson.containsKey('days')) {
         
-        // FIXED: Save the itinerary to database using the new method
         try {
           await _messageRepository.saveItineraryFromJson(event.chatId, completeResponse);
           log("Streaming itinerary saved to database successfully");
           
-          // Get the saved itinerary from database to ensure it's properly loaded
           final savedItinerary = await _messageRepository.getItinerary(event.chatId);
           if (savedItinerary != null) {
             log("Retrieved saved streaming itinerary: ${savedItinerary.title} with ${savedItinerary.days.length} days");
             emit(ItineraryReceivedSuccess(savedItinerary));
           } else {
             log("Failed to retrieve saved streaming itinerary");
-            // Fallback to creating from JSON
             final itinerary = Itinerary.fromJson(parsedJson);
             emit(ItineraryReceivedSuccess(itinerary));
           }
         } catch (saveError) {
           log("Error saving streaming itinerary: $saveError");
-          // Fallback to creating from JSON without saving
           final itinerary = Itinerary.fromJson(parsedJson);
           emit(ItineraryReceivedSuccess(itinerary));
         }
@@ -344,15 +386,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(ChatFailure("Failed to get a response"));
   }
 }
+
   Future<int> createNewChatSession() async {
-  return await _messageRepository.createNewChatSession();
-}
+    return await _messageRepository.createNewChatSession();
+  }
+
   Future<void> addSystemMessage(int chatId, String message) async {
-  await _messageRepository.addMessage(
-    chatId: chatId,
-    isUser: false,
-    message: message,
-    timestamp: DateTime.now().toIso8601String(),
-  );
-}
+    await _messageRepository.addMessage(
+      chatId: chatId,
+      isUser: false,
+      message: message,
+      timestamp: DateTime.now().toIso8601String(),
+    );
+  }
 }

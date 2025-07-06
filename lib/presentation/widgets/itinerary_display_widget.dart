@@ -32,7 +32,7 @@ class ItineraryDisplayWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header - Fixed height
+          // Header
           Container(
             padding: EdgeInsets.all(16.r),
             child: Column(
@@ -71,15 +71,15 @@ class ItineraryDisplayWidget extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: 12.h),
-                // Fixed: Use Column instead of Row to prevent horizontal overflow
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // Use Wrap to prevent overflow
+                Wrap(
+                  spacing: 8.w,
+                  runSpacing: 8.h,
                   children: [
                     _buildInfoChip(
                       icon: Icons.calendar_today,
                       text: '${itinerary.duration} days',
                     ),
-                    SizedBox(height: 8.h),
                     _buildInfoChip(
                       icon: Icons.attach_money,
                       text: itinerary.budget,
@@ -127,7 +127,7 @@ class ItineraryDisplayWidget extends StatelessWidget {
 
           SizedBox(height: 16.h),
 
-          // Days list - Fixed: Use Expanded with proper constraints
+          // Days list
           Expanded(
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 16.w),
