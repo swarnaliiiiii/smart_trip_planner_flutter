@@ -28,6 +28,7 @@ class ChatMessageWidget extends StatelessWidget {
             mainAxisAlignment: message.isUser
                 ? MainAxisAlignment.end
                 : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!message.isUser) ...[
                 CircleAvatar(
@@ -43,6 +44,9 @@ class ChatMessageWidget extends StatelessWidget {
               ],
               Flexible(
                 child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.75,
+                  ),
                   padding: EdgeInsets.symmetric(
                     horizontal: 16.w,
                     vertical: 12.h,
@@ -79,49 +83,18 @@ class ChatMessageWidget extends StatelessWidget {
           ),
           if (!message.isUser) ...[
             SizedBox(height: 8.h),
-            Row(
-              children: [
-                // Copy button
-                InkWell(
-                  onTap: onCopy,
-                  borderRadius: BorderRadius.circular(20.r),
-                  child: Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(20.r),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.copy_outlined,
-                          size: 16.sp,
-                          color: Colors.grey[600],
-                        ),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'Copy',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                // Regenerate button (only for last AI message)
-                if (isLastMessage) ...[
+            Padding(
+              padding: EdgeInsets.only(left: 40.w),
+              child: Wrap(
+                spacing: 8.w,
+                children: [
+                  // Copy button
                   InkWell(
-                    onTap: onRegenerate,
+                    onTap: onCopy,
                     borderRadius: BorderRadius.circular(20.r),
                     child: Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 12.w, vertical: 6.h),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                       decoration: BoxDecoration(
                         color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(20.r),
@@ -131,13 +104,13 @@ class ChatMessageWidget extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.refresh_outlined,
+                            Icons.copy_outlined,
                             size: 16.sp,
                             color: Colors.grey[600],
                           ),
                           SizedBox(width: 4.w),
                           Text(
-                            'Regenerate',
+                            'Copy',
                             style: TextStyle(
                               fontSize: 12.sp,
                               color: Colors.grey[600],
@@ -147,8 +120,42 @@ class ChatMessageWidget extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // Regenerate button (only for last AI message)
+                  if (isLastMessage) ...[
+                    InkWell(
+                      onTap: onRegenerate,
+                      borderRadius: BorderRadius.circular(20.r),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 12.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(20.r),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.refresh_outlined,
+                              size: 16.sp,
+                              color: Colors.grey[600],
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              'Regenerate',
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ],
         ],

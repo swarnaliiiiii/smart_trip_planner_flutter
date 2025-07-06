@@ -34,7 +34,7 @@ class ItineraryDisplayWidget extends StatelessWidget {
         children: [
           // Header - Fixed height
           Container(
-            padding: EdgeInsets.all(10.r),
+            padding: EdgeInsets.all(16.r),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -54,34 +54,35 @@ class ItineraryDisplayWidget extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           color: Colors.black,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 1.h),
+                SizedBox(height: 4.h),
                 Text(
                   itinerary.destination,
                   style: TextStyle(
                     fontSize: 14.sp,
                     color: Colors.grey[600],
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 10.h),
-                // Fixed: Wrap Row in Flexible to prevent horizontal overflow
-                Row(
+                SizedBox(height: 12.h),
+                // Fixed: Use Column instead of Row to prevent horizontal overflow
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
-                      child: _buildInfoChip(
-                        icon: Icons.calendar_today,
-                        text: '${itinerary.duration} days',
-                      ),
+                    _buildInfoChip(
+                      icon: Icons.calendar_today,
+                      text: '${itinerary.duration} days',
                     ),
-                    SizedBox(width: 8.w), // Increased spacing
-                    Flexible(
-                      child: _buildInfoChip(
-                        icon: Icons.attach_money,
-                        text: itinerary.budget,
-                      ),
+                    SizedBox(height: 8.h),
+                    _buildInfoChip(
+                      icon: Icons.attach_money,
+                      text: itinerary.budget,
                     ),
                   ],
                 ),
@@ -89,7 +90,7 @@ class ItineraryDisplayWidget extends StatelessWidget {
             ),
           ),
 
-          // Open in Maps button - Fixed height
+          // Open in Maps button
           Container(
             margin: EdgeInsets.symmetric(horizontal: 16.w),
             child: GestureDetector(
@@ -126,11 +127,12 @@ class ItineraryDisplayWidget extends StatelessWidget {
 
           SizedBox(height: 16.h),
 
-          // Days list - Fixed: Use Expanded instead of fixed height
+          // Days list - Fixed: Use Expanded with proper constraints
           Expanded(
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 16.w),
               child: ListView.builder(
+                padding: EdgeInsets.zero,
                 itemCount: itinerary.days.length,
                 itemBuilder: (context, index) {
                   final day = itinerary.days.elementAt(index);
@@ -205,7 +207,8 @@ class ItineraryDisplayWidget extends StatelessWidget {
                                                     ),
                                                   ),
                                                 ),
-                                                if (activity.location != null)
+                                                if (activity.location != null) ...[
+                                                  SizedBox(width: 8.w),
                                                   GestureDetector(
                                                     onTap: () => _openInMaps(
                                                         activity.location!),
@@ -215,6 +218,7 @@ class ItineraryDisplayWidget extends StatelessWidget {
                                                       color: Color(0xFF2196F3),
                                                     ),
                                                   ),
+                                                ],
                                               ],
                                             ),
                                             if (activity.description != null) ...[
@@ -278,7 +282,8 @@ class ItineraryDisplayWidget extends StatelessWidget {
                                             ),
                                           ),
                                         ),
-                                        if (restaurant.location != null)
+                                        if (restaurant.location != null) ...[
+                                          SizedBox(width: 8.w),
                                           GestureDetector(
                                             onTap: () =>
                                                 _openInMaps(restaurant.location!),
@@ -288,6 +293,7 @@ class ItineraryDisplayWidget extends StatelessWidget {
                                               color: Color(0xFF2196F3),
                                             ),
                                           ),
+                                        ],
                                       ],
                                     ),
                                   ))
@@ -309,7 +315,7 @@ class ItineraryDisplayWidget extends StatelessWidget {
 
   Widget _buildInfoChip({required IconData icon, required String text}) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.r),
@@ -322,15 +328,12 @@ class ItineraryDisplayWidget extends StatelessWidget {
             size: 14.sp,
             color: Colors.grey[600],
           ),
-          SizedBox(width: 4.w),
-          Flexible(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 12.sp,
-                color: Colors.grey[600],
-              ),
-              overflow: TextOverflow.ellipsis,
+          SizedBox(width: 6.w),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12.sp,
+              color: Colors.grey[600],
             ),
           ),
         ],
