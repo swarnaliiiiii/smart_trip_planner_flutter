@@ -25,6 +25,9 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isThinking = false;
   Itinerary? _currentItinerary;
   List<Itinerary> _savedItineraries = [];
+  bool _isConversationMode = false;
+  int? _conversationChatId;
+
 
   @override
   void initState() {
@@ -34,12 +37,15 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _loadMessages() async {
-    final chatBloc = context.read<ChatBloc>();
-    final messages = await chatBloc.getMessages(chatBloc.currentChatId);
-    setState(() {
-      _messages = messages;
-    });
-  }
+  final chatBloc = context.read<ChatBloc>();
+  final chatId = _isConversationMode && _conversationChatId != null 
+      ? _conversationChatId! 
+      : chatBloc.currentChatId;
+  final messages = await chatBloc.getMessages(chatId);
+  setState(() {
+    _messages = messages;
+  });
+ }
 
   void _loadSavedItineraries() async {
     final chatBloc = context.read<ChatBloc>();
@@ -61,18 +67,29 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  void _sendMessage() {
-    final text = _textController.text.trim();
-    if (text.isEmpty) return;
+void _sendMessage() {
+  final text = _textController.text.trim();
+  if (text.isEmpty) return;
 
-    final chatBloc = context.read<ChatBloc>();
+  final chatBloc = context.read<ChatBloc>();
+  
+  if (_isConversationMode && _conversationChatId != null) {
+    // In conversation mode, send as a follow-up question
+    chatBloc.add(PostDataEvent(
+      prompt: text,
+      chatId: _conversationChatId!,
+      isUser: true,
+    ));
+  } else {
+    // Normal itinerary generation
     chatBloc.add(GenerateItineraryEvent(
       prompt: text,
       chatId: chatBloc.currentChatId,
     ));
-
-    _textController.clear();
   }
+
+  _textController.clear();
+}
 
   void _saveItinerary() async {
     if (_currentItinerary != null) {
@@ -89,12 +106,52 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _openSavedItinerary(Itinerary itinerary) {
+  void _openSavedItinerary(Itinerary itinerary) async {
+  
+  final chatBloc = context.read<ChatBloc>();
+  final newChatId = await chatBloc.createNewChatSession();
+  
+  setState(() {
+    _currentItinerary = itinerary;
+    _messages = [];
+    _isConversationMode = true;
+    _conversationChatId = newChatId;
+  });
+  await chatBloc.addSystemMessage(
+    newChatId,
+    "I'm helping you modify this itinerary: ${itinerary.title} for ${itinerary.destination}. You can ask me to add activities, change restaurants, modify timings, or make any other adjustments."
+  );
+}
+
+void _regenerateResponse() {
+  if (_messages.isNotEmpty) {
+    final lastUserMessage = _messages.lastWhere((msg) => msg.isUser);
+    final chatBloc = context.read<ChatBloc>();
+    
+    // Remove the last AI response
     setState(() {
-      _currentItinerary = itinerary;
-      _messages = []; // Clear current messages to show the saved itinerary
+      _messages.removeWhere((msg) => !msg.isUser && 
+        _messages.indexOf(msg) > _messages.indexOf(lastUserMessage));
     });
+    
+    // Regenerate response for the last user message
+    chatBloc.add(GenerateItineraryEvent(
+      prompt: lastUserMessage.message,
+      chatId: _conversationChatId ?? chatBloc.currentChatId,
+    ));
   }
+}
+
+void _copyMessage(String content) {
+  Clipboard.setData(ClipboardData(text: content));
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('Copied to clipboard'),
+      backgroundColor: Color(0xFF065F46),
+      duration: Duration(seconds: 2),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -151,48 +208,52 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
       body: BlocListener<ChatBloc, ChatState>(
-        listener: (context, state) {
-          if (state is ChatSendSuccess) {
-            _loadMessages();
-            _scrollToBottom();
-            setState(() {
-              _isThinking = true;
-            });
-          } else if (state is ChatLoading) {
-            setState(() {
-              _isLoading = true;
-              _isThinking = false;
-            });
-          } else if (state is ItineraryReceivedSuccess) {
-            setState(() {
-              _isLoading = false;
-              _isThinking = false;
-              _currentItinerary = state.itinerary;
-            });
-            _loadMessages();
-            _scrollToBottom();
-          } else if (state is ChatReciveSuccess) {
-            setState(() {
-              _isLoading = false;
-              _isThinking = false;
-            });
-            _loadMessages();
-            _scrollToBottom();
-          } else if (state is ChatFailure) {
-            setState(() {
-              _isLoading = false;
-              _isThinking = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.error)),
-            );
-          } else if (state is NewChatSessionCreated) {
-            setState(() {
-              _messages = [];
-              _currentItinerary = null;
-            });
-          }
-        },
+         listener: (context, state) {
+    if (state is ChatSendSuccess) {
+      _loadMessages();
+      _scrollToBottom();
+      setState(() {
+        _isThinking = true;
+      });
+    } else if (state is ChatLoading) {
+      setState(() {
+        _isLoading = true;
+        _isThinking = false;
+      });
+    } else if (state is ItineraryReceivedSuccess) {
+      setState(() {
+        _isLoading = false;
+        _isThinking = false;
+        if (!_isConversationMode) {
+          _currentItinerary = state.itinerary;
+        }
+      });
+      _loadMessages();
+      _scrollToBottom();
+    } else if (state is ChatReciveSuccess) {
+      setState(() {
+        _isLoading = false;
+        _isThinking = false;
+      });
+      _loadMessages();
+      _scrollToBottom();
+    } else if (state is ChatFailure) {
+      setState(() {
+        _isLoading = false;
+        _isThinking = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(state.error)),
+      );
+    } else if (state is NewChatSessionCreated) {
+      if (!_isConversationMode) {
+        setState(() {
+          _messages = [];
+          _currentItinerary = null;
+        });
+      }
+    }
+  },
         child: Column(
           children: [
             // Loading overlay
@@ -211,7 +272,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           valueColor: AlwaysStoppedAnimation<Color>(
                             Color(0xFF065F46),
                           ),
-                        ),
+                        ), 
                       ),
                       SizedBox(height: 24.h),
                       Text(
@@ -252,12 +313,21 @@ class _ChatScreenState extends State<ChatScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: () {
-                                // Start fresh conversation about current itinerary
+                              onPressed: () async {
+                                final chatBloc = context.read<ChatBloc>();
+                                final newChatId = await chatBloc.createNewChatSession();
+  
                                 setState(() {
+                                  _isConversationMode = true;
+                                  _conversationChatId = newChatId;
+                                  _messages = [];
                                   _currentItinerary = null;
-                                  _messages = []; // Clear previous messages for fresh start
                                 });
+
+                                await chatBloc.addSystemMessage(
+                                  newChatId,
+                                  "I'm helping you refine this itinerary: ${_currentItinerary!.title} for ${_currentItinerary!.destination}. You can ask me to add activities, change restaurants, modify timings, or make any other adjustments."
+                                );
                               },
                               icon: Icon(Icons.chat_bubble_outline),
                               label: Text('Follow up to refine'),
@@ -405,20 +475,29 @@ class _ChatScreenState extends State<ChatScreen> {
             ] else ...[
               Expanded(
                 child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: _messages.length + (_isThinking ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == _messages.length && _isThinking) {
-                      return ThinkingBubbleWidget();
-                    }
-                    return ChatMessageWidget(message: _messages[index]);
-                  },
-                ),
-              ),
-            ],
+                controller: _scrollController,
+                itemCount: _messages.length + (_isThinking ? 1 : 0),
+                itemBuilder: (context, index) {
+                if (index == _messages.length && _isThinking) {
+                 return ThinkingBubbleWidget();
+              }
+              final message = _messages[index];
+              final isLastAIMessage = !message.isUser && 
+              index == _messages.length - 1 && 
+              !_isThinking;
+              return ChatMessageWidget(
+                message: message,
+                onCopy: () => _copyMessage(message.message),
+                onRegenerate: isLastAIMessage ? _regenerateResponse : null,
+                isLastMessage: isLastAIMessage,
+              );
+            },
+          ),
+        ),
+      ],
             
             // Input area - only show for follow-up messages
-            if (!_isLoading && _currentItinerary == null && _messages.isNotEmpty)
+            if (!_isLoading && _currentItinerary == null && (_messages.isNotEmpty || _isConversationMode))
               Container(
                 padding: EdgeInsets.all(16.r),
                 decoration: BoxDecoration(

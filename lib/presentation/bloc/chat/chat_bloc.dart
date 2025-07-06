@@ -344,4 +344,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(ChatFailure("Failed to get a response"));
   }
 }
+  Future<int> createNewChatSession() async {
+  return await _messageRepository.createNewChatSession();
+}
+  Future<void> addSystemMessage(int chatId, String message) async {
+  await _messageRepository.addMessage(
+    chatId: chatId,
+    isUser: false,
+    message: message,
+    timestamp: DateTime.now().toIso8601String(),
+  );
+}
 }
