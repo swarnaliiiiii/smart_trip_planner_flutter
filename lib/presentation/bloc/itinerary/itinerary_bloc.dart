@@ -53,8 +53,18 @@ class ItineraryBloc extends Bloc<ItineraryEvent, ItineraryState> {
           final itinerary = Itinerary()
             ..title = parsedJson['title'] ?? 'Generated Trip'
             ..destination = parsedJson['destination'] ?? 'Unknown Destination'
+            ..startDate = parsedJson['startDate'] ??
+                DateTime.now().toIso8601String().split('T')[0]
+            ..endDate = parsedJson['endDate'] ??
+                DateTime.now()
+                    .add(Duration(days: 1))
+                    .toIso8601String()
+                    .split('T')[0]
             ..duration = parsedJson['duration'] ?? 1
+            ..budget = parsedJson['budget'] ?? 'Not specified'
+            ..travelStyle = parsedJson['travelStyle'] ?? 'General'
             ..description = parsedJson['description'] ?? ''
+            ..createdAt = DateTime.now().toIso8601String()
             ..jsonData = response; // Store the full JSON response
 
           await isar.writeTxn(() async => await isar.itinerarys.put(itinerary));
@@ -64,8 +74,16 @@ class ItineraryBloc extends Bloc<ItineraryEvent, ItineraryState> {
           final itinerary = Itinerary()
             ..title = 'Generated Trip'
             ..destination = 'Unknown Destination'
+            ..startDate = DateTime.now().toIso8601String().split('T')[0]
+            ..endDate = DateTime.now()
+                .add(Duration(days: 1))
+                .toIso8601String()
+                .split('T')[0]
             ..duration = 1
+            ..budget = 'Not specified'
+            ..travelStyle = 'General'
             ..description = 'AI generated itinerary'
+            ..createdAt = DateTime.now().toIso8601String()
             ..jsonData = response;
 
           await isar.writeTxn(() async => await isar.itinerarys.put(itinerary));
@@ -94,8 +112,16 @@ class ItineraryBloc extends Bloc<ItineraryEvent, ItineraryState> {
           event.itinerary.title = parsedJson['title'] ?? event.itinerary.title;
           event.itinerary.destination =
               parsedJson['destination'] ?? event.itinerary.destination;
+          event.itinerary.startDate =
+              parsedJson['startDate'] ?? event.itinerary.startDate;
+          event.itinerary.endDate =
+              parsedJson['endDate'] ?? event.itinerary.endDate;
           event.itinerary.duration =
               parsedJson['duration'] ?? event.itinerary.duration;
+          event.itinerary.budget =
+              parsedJson['budget'] ?? event.itinerary.budget;
+          event.itinerary.travelStyle =
+              parsedJson['travelStyle'] ?? event.itinerary.travelStyle;
           event.itinerary.description =
               parsedJson['description'] ?? event.itinerary.description;
           event.itinerary.jsonData = response;
@@ -132,10 +158,57 @@ class ItineraryBloc extends Bloc<ItineraryEvent, ItineraryState> {
       FollowUpItinerary event, Emitter<ItineraryState> emit) async {
     emit(ItineraryLoading());
     try {
-      // TODO: Call AI API to modify itinerary based on follow-up
-      emit(ItineraryLoaded(event.itinerary));
+      // Create a context-aware prompt for follow-up
+      final currentItineraryJson = event.itinerary.jsonData ?? '{}';
+      final followUpPrompt = '''
+Based on the current itinerary and the user's follow-up request, please modify the itinerary accordingly.
+
+Current Itinerary: $currentItineraryJson
+
+User's Follow-up Request: ${event.followUp}
+
+Please provide an updated JSON itinerary that incorporates the user's feedback while maintaining the structure and quality of the original plan.
+''';
+
+      final response = await _aiService.generateItinerary(followUpPrompt);
+
+      if (response != null) {
+        try {
+          Map<String, dynamic> parsedJson = jsonDecode(response);
+
+          // Update the itinerary with new data
+          event.itinerary.title = parsedJson['title'] ?? event.itinerary.title;
+          event.itinerary.destination =
+              parsedJson['destination'] ?? event.itinerary.destination;
+          event.itinerary.startDate =
+              parsedJson['startDate'] ?? event.itinerary.startDate;
+          event.itinerary.endDate =
+              parsedJson['endDate'] ?? event.itinerary.endDate;
+          event.itinerary.duration =
+              parsedJson['duration'] ?? event.itinerary.duration;
+          event.itinerary.budget =
+              parsedJson['budget'] ?? event.itinerary.budget;
+          event.itinerary.travelStyle =
+              parsedJson['travelStyle'] ?? event.itinerary.travelStyle;
+          event.itinerary.description =
+              parsedJson['description'] ?? event.itinerary.description;
+          event.itinerary.jsonData = response;
+
+          await isar
+              .writeTxn(() async => await isar.itinerarys.put(event.itinerary));
+          emit(ItineraryLoaded(event.itinerary));
+        } catch (e) {
+          // If JSON parsing fails, update with raw response
+          event.itinerary.jsonData = response;
+          await isar
+              .writeTxn(() async => await isar.itinerarys.put(event.itinerary));
+          emit(ItineraryLoaded(event.itinerary));
+        }
+      } else {
+        emit(ItineraryError('Failed to process follow-up request'));
+      }
     } catch (e) {
-      emit(ItineraryError('Failed to follow up itinerary'));
+      emit(ItineraryError('Failed to follow up itinerary: ${e.toString()}'));
     }
   }
 

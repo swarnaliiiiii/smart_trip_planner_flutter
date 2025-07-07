@@ -24,11 +24,13 @@ class MetricsManager {
   MetricsManager._internal();
 
   final List<TokenMetrics> _metrics = [];
-  bool _debugMode = false;
+  bool _debugMode = true; // Enable debug mode by default for development
 
   // Gemini pricing (approximate)
-  static const double _inputTokenCostPer1K = 0.00015; // $0.00015 per 1K input tokens
-  static const double _outputTokenCostPer1K = 0.0006; // $0.0006 per 1K output tokens
+  static const double _inputTokenCostPer1K =
+      0.00015; // $0.00015 per 1K input tokens
+  static const double _outputTokenCostPer1K =
+      0.0006; // $0.0006 per 1K output tokens
 
   void setDebugMode(bool enabled) {
     _debugMode = enabled;
@@ -51,7 +53,7 @@ class MetricsManager {
     );
 
     _metrics.add(metric);
-    
+
     if (_debugMode) {
       log('Token Usage - Input: $inputTokens, Output: $outputTokens, Cost: \$${cost.toStringAsFixed(4)}');
     }
@@ -67,9 +69,11 @@ class MetricsManager {
 
   TokenMetrics? get lastMetric => _metrics.isNotEmpty ? _metrics.last : null;
 
-  double get totalCost => _metrics.fold(0.0, (sum, metric) => sum + metric.estimatedCost);
+  double get totalCost =>
+      _metrics.fold(0.0, (sum, metric) => sum + metric.estimatedCost);
 
-  int get totalTokens => _metrics.fold(0, (sum, metric) => sum + metric.totalTokens);
+  int get totalTokens =>
+      _metrics.fold(0, (sum, metric) => sum + metric.totalTokens);
 
   void clearMetrics() {
     _metrics.clear();
