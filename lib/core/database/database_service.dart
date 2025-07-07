@@ -3,6 +3,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:talk_trip/data/models/message.dart';
 import 'package:talk_trip/data/models/chat_session.dart';
 import 'package:talk_trip/data/models/itinerary.dart';
+import 'package:talk_trip/data/models/user.dart';
 
 class DatabaseService {
   static Isar? _isar;
@@ -19,6 +20,7 @@ class DatabaseService {
         ItineraryDaySchema,
         ActivitySchema,
         RestaurantSchema,
+        UserSchema,
       ],
       directory: dir.path,
     );

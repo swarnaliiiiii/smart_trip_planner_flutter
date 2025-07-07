@@ -47,18 +47,23 @@ const ItinerarySchema = CollectionSchema(
       name: r'endDate',
       type: IsarType.string,
     ),
-    r'startDate': PropertySchema(
+    r'jsonData': PropertySchema(
       id: 6,
+      name: r'jsonData',
+      type: IsarType.string,
+    ),
+    r'startDate': PropertySchema(
+      id: 7,
       name: r'startDate',
       type: IsarType.string,
     ),
     r'title': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'title',
       type: IsarType.string,
     ),
     r'travelStyle': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'travelStyle',
       type: IsarType.string,
     )
@@ -114,6 +119,12 @@ int _itineraryEstimateSize(
   }
   bytesCount += 3 + object.destination.length * 3;
   bytesCount += 3 + object.endDate.length * 3;
+  {
+    final value = object.jsonData;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.startDate.length * 3;
   bytesCount += 3 + object.title.length * 3;
   bytesCount += 3 + object.travelStyle.length * 3;
@@ -132,9 +143,10 @@ void _itinerarySerialize(
   writer.writeString(offsets[3], object.destination);
   writer.writeLong(offsets[4], object.duration);
   writer.writeString(offsets[5], object.endDate);
-  writer.writeString(offsets[6], object.startDate);
-  writer.writeString(offsets[7], object.title);
-  writer.writeString(offsets[8], object.travelStyle);
+  writer.writeString(offsets[6], object.jsonData);
+  writer.writeString(offsets[7], object.startDate);
+  writer.writeString(offsets[8], object.title);
+  writer.writeString(offsets[9], object.travelStyle);
 }
 
 Itinerary _itineraryDeserialize(
@@ -151,9 +163,10 @@ Itinerary _itineraryDeserialize(
   object.duration = reader.readLong(offsets[4]);
   object.endDate = reader.readString(offsets[5]);
   object.id = id;
-  object.startDate = reader.readString(offsets[6]);
-  object.title = reader.readString(offsets[7]);
-  object.travelStyle = reader.readString(offsets[8]);
+  object.jsonData = reader.readStringOrNull(offsets[6]);
+  object.startDate = reader.readString(offsets[7]);
+  object.title = reader.readString(offsets[8]);
+  object.travelStyle = reader.readString(offsets[9]);
   return object;
 }
 
@@ -177,10 +190,12 @@ P _itineraryDeserializeProp<P>(
     case 5:
       return (reader.readString(offset)) as P;
     case 6:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 7:
       return (reader.readString(offset)) as P;
     case 8:
+      return (reader.readString(offset)) as P;
+    case 9:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1109,6 +1124,154 @@ extension ItineraryQueryFilter
     });
   }
 
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition> jsonDataIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'jsonData',
+      ));
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition>
+      jsonDataIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'jsonData',
+      ));
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition> jsonDataEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'jsonData',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition> jsonDataGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'jsonData',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition> jsonDataLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'jsonData',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition> jsonDataBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'jsonData',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition> jsonDataStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'jsonData',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition> jsonDataEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'jsonData',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition> jsonDataContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'jsonData',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition> jsonDataMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'jsonData',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition> jsonDataIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'jsonData',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition>
+      jsonDataIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'jsonData',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Itinerary, Itinerary, QAfterFilterCondition> startDateEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1642,6 +1805,18 @@ extension ItineraryQuerySortBy on QueryBuilder<Itinerary, Itinerary, QSortBy> {
     });
   }
 
+  QueryBuilder<Itinerary, Itinerary, QAfterSortBy> sortByJsonData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'jsonData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterSortBy> sortByJsonDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'jsonData', Sort.desc);
+    });
+  }
+
   QueryBuilder<Itinerary, Itinerary, QAfterSortBy> sortByStartDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'startDate', Sort.asc);
@@ -1765,6 +1940,18 @@ extension ItineraryQuerySortThenBy
     });
   }
 
+  QueryBuilder<Itinerary, Itinerary, QAfterSortBy> thenByJsonData() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'jsonData', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Itinerary, Itinerary, QAfterSortBy> thenByJsonDataDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'jsonData', Sort.desc);
+    });
+  }
+
   QueryBuilder<Itinerary, Itinerary, QAfterSortBy> thenByStartDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'startDate', Sort.asc);
@@ -1845,6 +2032,13 @@ extension ItineraryQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Itinerary, Itinerary, QDistinct> distinctByJsonData(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'jsonData', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<Itinerary, Itinerary, QDistinct> distinctByStartDate(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1908,6 +2102,12 @@ extension ItineraryQueryProperty
   QueryBuilder<Itinerary, String, QQueryOperations> endDateProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'endDate');
+    });
+  }
+
+  QueryBuilder<Itinerary, String?, QQueryOperations> jsonDataProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'jsonData');
     });
   }
 

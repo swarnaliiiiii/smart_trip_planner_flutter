@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:talk_trip/presentation/bloc/chat/chat_bloc.dart';
-import 'package:talk_trip/presentation/viewmodel/chat.dart';
-import 'package:talk_trip/data/sources/api/gen_ai_service.dart';
-import 'package:talk_trip/data/repo/message_repo.dart';
+import 'package:talk_trip/presentation/bloc/auth/auth_bloc.dart';
+import 'package:talk_trip/presentation/bloc/itinerary/itinerary_bloc.dart';
 import 'package:talk_trip/core/database/database_service.dart';
+import 'package:talk_trip/presentation/screens/auth/sign_in_screen.dart';
+import 'package:talk_trip/presentation/screens/auth/sign_up_screen.dart';
+import 'package:talk_trip/presentation/screens/home/home_screen.dart';
+import 'package:talk_trip/presentation/screens/itinerary/itinerary_flow_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -16,6 +18,8 @@ class MyApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (_, child) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'TalkTrip',
         builder: (context, child) {
           final mediaQueryData = MediaQuery.of(context);
           final scaledMediaQueryData = mediaQueryData.copyWith(
@@ -26,27 +30,30 @@ class MyApp extends StatelessWidget {
             child: child!,
           );
         },
-        debugShowCheckedModeBanner: false,
-        title: 'TalkTrip',
         home: FutureBuilder(
           future: DatabaseService.instance,
           builder: (context, snapshot) {
             if (snapshot.hasData) {
-              return BlocProvider(
-                create: (context) => ChatBloc(
-                  GenerativeAIWebService(),
-                  MessageRepository(snapshot.data!),
-                ),
-                child: ChatScreen(),
+              final isar = snapshot.data!;
+              return MultiBlocProvider(
+                providers: [
+                  BlocProvider(create: (_) => AuthBloc(isar)),
+                  BlocProvider(create: (_) => ItineraryBloc(isar)),
+                ],
+                child: SignUpScreen(),
               );
             }
             return Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
-              ),
+              body: Center(child: CircularProgressIndicator()),
             );
           },
         ),
+        routes: {
+          '/signin': (_) => SignInScreen(),
+          '/signup': (_) => SignUpScreen(),
+          '/home': (_) => HomeScreen(),
+          // '/itinerary': (_) => ItineraryFlowScreen(prompt: ''), // Use push with prompt param
+        },
       ),
     );
   }

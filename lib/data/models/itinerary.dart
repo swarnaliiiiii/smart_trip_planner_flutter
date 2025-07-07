@@ -5,7 +5,7 @@ part 'itinerary.g.dart';
 @collection
 class Itinerary {
   Id id = Isar.autoIncrement;
-  
+
   late String title;
   late String destination;
   late String startDate;
@@ -14,10 +14,11 @@ class Itinerary {
   late String budget;
   late String travelStyle;
   String? description;
-  
+  String? jsonData;
+
   @Index()
   late String createdAt;
-  
+
   final days = IsarLinks<ItineraryDay>();
 
   Itinerary();
@@ -31,6 +32,7 @@ class Itinerary {
     budget = json['budget'] ?? '';
     travelStyle = json['travelStyle'] ?? '';
     description = json['description'];
+    jsonData = json['jsonData'];
     createdAt = DateTime.now().toIso8601String();
   }
 
@@ -44,6 +46,7 @@ class Itinerary {
       'budget': budget,
       'travelStyle': travelStyle,
       'description': description,
+      'jsonData': jsonData,
       'createdAt': createdAt,
       'days': days.map((day) => day.toJson()).toList(),
     };
@@ -53,12 +56,12 @@ class Itinerary {
 @collection
 class ItineraryDay {
   Id id = Isar.autoIncrement;
-  
+
   late int dayNumber;
   late String date;
   late String title;
   String? description;
-  
+
   final activities = IsarLinks<Activity>();
   final restaurants = IsarLinks<Restaurant>();
 
@@ -78,7 +81,8 @@ class ItineraryDay {
       'title': title,
       'description': description,
       'activities': activities.map((activity) => activity.toJson()).toList(),
-      'restaurants': restaurants.map((restaurant) => restaurant.toJson()).toList(),
+      'restaurants':
+          restaurants.map((restaurant) => restaurant.toJson()).toList(),
     };
   }
 }
@@ -86,7 +90,7 @@ class ItineraryDay {
 @collection
 class Activity {
   Id id = Isar.autoIncrement;
-  
+
   late String name;
   late String type;
   String? description;
@@ -132,7 +136,7 @@ class Activity {
 @collection
 class Restaurant {
   Id id = Isar.autoIncrement;
-  
+
   late String name;
   late String cuisine;
   String? description;
@@ -171,4 +175,3 @@ class Restaurant {
     };
   }
 }
-
