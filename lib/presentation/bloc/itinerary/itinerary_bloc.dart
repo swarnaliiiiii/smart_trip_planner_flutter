@@ -170,7 +170,13 @@ User's Follow-up Request: ${event.followUp}
 Please provide an updated JSON itinerary that incorporates the user's feedback while maintaining the structure and quality of the original plan.
 ''';
 
-      final response = await _aiService.generateItinerary(followUpPrompt);
+      // Use the destination from the current itinerary if available
+      final destination = event.itinerary.destination;
+      final response = await _aiService.generateItinerary(
+        followUpPrompt,
+        isRefine: true,
+        destination: destination,
+      );
 
       if (response != null) {
         try {

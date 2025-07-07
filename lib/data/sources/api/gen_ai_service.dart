@@ -60,23 +60,43 @@ class GenerativeAIWebService {
     }
   }
 
-  Future<String?> generateItinerary(String userPrompt) async {
+  Future<String?> generateItinerary(String userPrompt,
+      {bool isRefine = false, String? destination}) async {
     try {
       final inputTokens = MetricsManager.estimateTokens(userPrompt);
 
       // Extract destination and search for real-time information
       String searchContext = '';
+      String dest = destination ?? '';
       try {
-        final destination = _extractDestination(userPrompt);
-        if (destination.isNotEmpty) {
-          log('Searching for information about: $destination');
-          final searchResults = await _searchService
-              .searchPlaces('best attractions $destination');
-          if (searchResults.isNotEmpty) {
-            searchContext = '\n\nReal-time information about $destination:\n';
-            for (int i = 0; i < searchResults.length && i < 3; i++) {
-              final result = searchResults[i];
-              searchContext += '- ${result['title']}: ${result['snippet']}\n';
+        if (dest.isEmpty) {
+          dest = _extractDestination(userPrompt);
+        }
+        if (dest.isNotEmpty) {
+          // Attractions
+          final attractions =
+              await _searchService.searchPlaces('best attractions $dest');
+          if (attractions.isNotEmpty) {
+            searchContext += '\n- Top attractions:\n';
+            for (var result in attractions.take(3)) {
+              searchContext += '  - ${result['title']}: ${result['snippet']}\n';
+            }
+          }
+          // Restaurants
+          final restaurants =
+              await _searchService.searchPlaces('best restaurants $dest');
+          if (restaurants.isNotEmpty) {
+            searchContext += '\n- Best restaurants:\n';
+            for (var result in restaurants.take(3)) {
+              searchContext += '  - ${result['title']}: ${result['snippet']}\n';
+            }
+          }
+          // Hotels
+          final hotels = await _searchService.searchPlaces('best hotels $dest');
+          if (hotels.isNotEmpty) {
+            searchContext += '\n- Top hotels:\n';
+            for (var result in hotels.take(3)) {
+              searchContext += '  - ${result['title']}: ${result['snippet']}\n';
             }
           }
         }
@@ -88,7 +108,9 @@ class GenerativeAIWebService {
       final prompt = '''
 You are a travel planning expert. Based on the user's request, create a detailed travel itinerary in JSON format.
 
-User Request: $userPrompt$searchContext
+User Request: $userPrompt
+
+${isRefine ? 'Real-time information:\n$searchContext' : searchContext}
 
 Please respond with a JSON object that includes:
 1. Basic trip information (title, destination, dates, duration, budget, travel style)

@@ -157,9 +157,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.r)),
                         ),
-                        child: Text('Sign UP',
+                        child: Text('Sign up',
                             style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16.sp)),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16.sp,
+                                color: Colors.white)),
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                    Center(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pushReplacementNamed('/signin');
+                        },
+                        child: Text(
+                          'Already have an account? Sign in',
+                          style: TextStyle(
+                            color: Color(0xFF2196F3),
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
                     ),
                   ],

@@ -8,6 +8,9 @@ import 'package:talk_trip/presentation/bloc/itinerary/itinerary_bloc.dart';
 import 'package:talk_trip/presentation/screens/itinerary/itinerary_flow_screen.dart';
 import 'package:talk_trip/core/utils/metrics_manager.dart';
 import 'package:talk_trip/presentation/screens/profile/profile_screen.dart';
+import 'package:talk_trip/presentation/bloc/auth/auth_bloc.dart';
+import 'package:talk_trip/presentation/screens/itinerary/itinerary_display_screen.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,13 +23,28 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _textController = TextEditingController();
   List<Itinerary> _savedItineraries = [];
   User? _user;
+  late stt.SpeechToText _speech;
+  bool _isListening = false;
+  String _voiceInput = '';
 
   @override
   void initState() {
     super.initState();
+    _speech = stt.SpeechToText();
     _loadUser();
     _loadItineraries();
     _createDefaultUserIfNeeded();
+    // Listen to AuthBloc for user changes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authBloc = BlocProvider.of<AuthBloc>(context);
+      authBloc.stream.listen((state) {
+        if (state is Authenticated) {
+          setState(() {
+            _user = state.user;
+          });
+        }
+      });
+    });
   }
 
   Future<void> _loadUser() async {
@@ -71,12 +89,44 @@ class _HomeScreenState extends State<HomeScreen> {
     // Dispatch Bloc event to create itinerary
     context.read<ItineraryBloc>().add(CreateItinerary(prompt: text));
 
-    // Navigate to itinerary flow screen
+    // Navigate to itinerary display screen
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => ItineraryFlowScreen(prompt: text),
+        builder: (context) => ItineraryDisplayScreen(prompt: text),
       ),
     );
+  }
+
+  void _listen() async {
+    print('DEBUG: Mic button pressed. _isListening=$_isListening');
+    if (!_isListening) {
+      bool available = await _speech.initialize();
+      print('DEBUG: SpeechToText initialized. Available: $available');
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (val) {
+            print(
+                'DEBUG: onResult called. Recognized: \'${val.recognizedWords}\'');
+            setState(() {
+              _voiceInput = val.recognizedWords;
+              _textController.text = _voiceInput;
+            });
+          },
+          listenFor: Duration(seconds: 10),
+          pauseFor: Duration(seconds: 3),
+          localeId: 'en_US',
+          cancelOnError: true,
+        );
+        print('DEBUG: Started listening.');
+      } else {
+        print('DEBUG: Speech recognition not available.');
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+      print('DEBUG: Stopped listening.');
+    }
   }
 
   @override
@@ -86,21 +136,39 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(
-          'Hey ${_user?.name ?? ''} 👋',
-          style: TextStyle(
-            fontSize: 22.sp,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF065F46),
-          ),
+        title: Builder(
+          builder: (context) {
+            final authState = BlocProvider.of<AuthBloc>(context).state;
+            String userName = 'Traveler';
+            if (authState is Authenticated && authState.user.name.isNotEmpty) {
+              userName = authState.user.name;
+            }
+            return Text(
+              'Hey $userName 👋',
+              style: TextStyle(
+                fontSize: 22.sp,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF065F46),
+              ),
+            );
+          },
         ),
         actions: [
           Padding(
             padding: EdgeInsets.only(right: 16.w),
             child: GestureDetector(
               onTap: () {
+                final authState = BlocProvider.of<AuthBloc>(context).state;
+                User? currentUser;
+                if (authState is Authenticated) {
+                  currentUser = authState.user;
+                } else {
+                  currentUser = null;
+                }
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => ProfileScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => ProfileScreen(user: currentUser),
+                  ),
                 );
               },
               child: CircleAvatar(
@@ -164,34 +232,31 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText:
-                                  '7 days in Bali next April, 3 people, mid-range budget, wanted to explore less populated areas, it should be a peaceful trip!',
+                              hintText: 'Describe your trip!',
                               hintStyle: TextStyle(color: Colors.grey[500]),
                             ),
                             onSubmitted: (_) => _onCreateItinerary(),
                           ),
                         ),
-                        IconButton(
-                          icon: Icon(Icons.mic, color: Color(0xFF3BAB8C)),
-                          onPressed: () {
-                            // TODO: Implement proper speech recognition
-                            // For now, show a dialog to simulate voice input
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: Text('Voice Input'),
-                                content: Text(
-                                    'Voice input will be implemented with speech recognition. For now, you can type your request.'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(),
-                                    child: Text('OK'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                        AnimatedContainer(
+                          duration: Duration(milliseconds: 300),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: _isListening
+                                ? [
+                                    BoxShadow(
+                                      color: Color(0xFF3BAB8C).withOpacity(0.6),
+                                      blurRadius: 16,
+                                      spreadRadius: 4,
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                          child: IconButton(
+                            icon: Icon(_isListening ? Icons.mic_off : Icons.mic,
+                                color: Color(0xFF3BAB8C)),
+                            onPressed: _listen,
+                          ),
                         ),
                       ],
                     ),
@@ -250,7 +315,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                     margin: EdgeInsets.only(bottom: 12.h),
                                     child: GestureDetector(
                                       onTap: () {
-                                        // TODO: Open itinerary in chat/modify mode
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                ItineraryFlowScreen(
+                                              prompt: itinerary.title,
+                                              initialItinerary: itinerary,
+                                            ),
+                                          ),
+                                        );
                                       },
                                       child: Container(
                                         padding: EdgeInsets.all(16.r),
@@ -323,54 +396,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          // Debug Metrics Overlay
-          if (MetricsManager().isDebugMode)
-            Positioned(
-              top: 100.h,
-              right: 16.w,
-              child: Container(
-                padding: EdgeInsets.all(8.r),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.8),
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Token Metrics',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      'Total: ${MetricsManager().totalTokens}',
-                      style: TextStyle(color: Colors.white, fontSize: 10.sp),
-                    ),
-                    Text(
-                      'Cost: \$${MetricsManager().totalCost.toStringAsFixed(4)}',
-                      style: TextStyle(color: Colors.white, fontSize: 10.sp),
-                    ),
-                    if (MetricsManager().lastMetric != null) ...[
-                      SizedBox(height: 4.h),
-                      Text(
-                        'Last: ${MetricsManager().lastMetric!.requestType}',
-                        style:
-                            TextStyle(color: Colors.grey[300], fontSize: 9.sp),
-                      ),
-                      Text(
-                        'I/O: ${MetricsManager().lastMetric!.inputTokens}/${MetricsManager().lastMetric!.outputTokens}',
-                        style:
-                            TextStyle(color: Colors.grey[300], fontSize: 9.sp),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
     );

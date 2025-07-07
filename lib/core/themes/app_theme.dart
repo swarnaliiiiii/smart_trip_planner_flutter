@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   static final darkTheme = ThemeData(
-    brightness: Brightness.dark,
+    brightness: Brightness.light,
     primarySwatch: Colors.green,
-    scaffoldBackgroundColor: Colors.black,
+    scaffoldBackgroundColor: Colors.white,
     appBarTheme: AppBarTheme(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       elevation: 0,
       iconTheme: IconThemeData(color: Colors.white),
       titleTextStyle: TextStyle(
           color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
     ),
     textTheme: TextTheme(
-      bodyLarge: TextStyle(color: Colors.white),
-      bodyMedium: TextStyle(color: Colors.white70),
+      bodyLarge: TextStyle(color: Colors.black),
+      bodyMedium: TextStyle(color: Colors.black),
     ),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(),
       filled: true,
-      fillColor: Colors.grey[900],
+      fillColor: Colors.white,
     ),
   );
 }
